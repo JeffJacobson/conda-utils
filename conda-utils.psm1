@@ -23,6 +23,23 @@ class CondaEnvironment {
         $this.Directory = $directory
         $this.IsDefault = $isDefault
     }
+    <#
+    .SYNOPSIS
+        Returns all of the Powershell script files ("*.ps1") in the CondaEnvironment.Directory.
+    .EXAMPLE
+        Get-CondaEnvironments | ForEach-Object { $_.GetPowershellFiles() } | Select-Object -Property FullName
+
+        FullName
+        --------
+        C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\Lib\venv\scripts\common\Activate.ps1
+        C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\Lib\venv\scripts\common\Activate.ps1
+        C:\Users\JacobsJ\AppData\Local\ESRI\conda\envs\ogr-test\etc\conda\activate.d\gdal-activate.ps1
+        C:\Users\JacobsJ\AppData\Local\ESRI\conda\envs\ogr-test\etc\conda\deactivate.d\gdal-deactivate.ps1
+        C:\Users\JacobsJ\AppData\Local\ESRI\conda\envs\ogr-test\Lib\venv\scripts\common\Activate.ps1
+    #>
+    [IEnumerable[FileInfo]] GetPowershellFiles() {
+        return $this.Directory.EnumerateFiles("*.ps1", [SearchOption]::AllDirectories);
+    }
 }
 
 <#
@@ -36,8 +53,25 @@ class CondaEnvironment {
     Name                  Directory                                                 IsDefault
     ----                  ---------                                                 ---------
     base                  C:\Program Files\ArcGIS\Pro\bin\Python                        False
-    arcgispro-py3         C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3      True
-    ogr-test              C:\Users\YourUserName\AppData\Local\ESRI\conda\envs\ogr-test       False
+    arcgispro-py3         C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3     True
+    ogr-test              C:\Users\YourUserName\AppData\Local\ESRI\conda\envs\ogr-test  False
+
+.EXAMPLE
+    Get-CondaEnvironments | Sort-Object -Property IsDefault
+
+    Name                  Directory                                                 IsDefault
+    ----                  ---------                                                 ---------
+    base                  C:\Program Files\ArcGIS\Pro\bin\Python                        False
+    ogr-test              C:\Users\YourUserName\AppData\Local\ESRI\conda\envs\ogr-test  False
+    arcgispro-py3         C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3     True
+
+.EXAMPLE
+    Get-CondaEnvironments | Sort-Object -Property IsDefault -Descending
+    Name                  Directory                                                 IsDefault
+    ----                  ---------                                                 ---------
+    arcgispro-py3         C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3     True
+    base                  C:\Program Files\ArcGIS\Pro\bin\Python                        False
+    ogr-test              C:\Users\YourUserName\AppData\Local\ESRI\conda\envs\ogr-test  False
 #>
 function Get-CondaEnvironments {
     [string[]]$condaEnvList = Invoke-Expression "conda env list"
