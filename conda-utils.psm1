@@ -44,6 +44,65 @@ class CondaEnvironment {
 
 <#
 .SYNOPSIS
+    Locates the "conda" command.
+.DESCRIPTION
+    Tries to locate the conda command first with `Get-Command("conda")`,
+    then searches recursively via Get-ChildItem in the "$env:ProgramFiles\ArcGIS" directory.
+.EXAMPLE
+    Get-CondaCommand
+
+    CommandType     Name                                               Version    Source
+    -----------     ----                                               -------    ------
+    Application     conda.exe                                          0.0.0.0    C:\Program Files\ArcGIS\Pro\bin\Python\Scripts\conda.exe
+    
+#>
+function Get-CondaCommand {
+    # Try to get the conda command from directories in $env:Path
+    # If not found, $condaCommand will be $null.
+    # Otherwise the variable will contain the path to
+    # the executable "conda" file.
+    $condaCommand = Get-Command("conda") -ErrorAction Continue
+
+    # Return the command if it was found.
+    if ($null -cne $condaCommand) {
+        return $condaCommand
+    }
+
+    [DirectoryInfo[]]$possiblePaths = 
+      ("$env:ProgramFiles\ArcGIS\Pro\bin\Python\Scripts",
+    "$env:ProgramFiles\ArcGIS\Server\framework\runtime\ArcGIS\bin\Python\Scripts")
+
+    # $getChildItemSearchPath = "$env:ProgramFiles\**\conda.*"
+    
+
+    Write-Information "Could not find the ""Conda"" file in the directories specified in the PATH environment variable."
+
+    # Loop through all the files in the "Program Files" directory and return the first match.
+    $activity = "Searching for conda command in $getChildItemSearchPath"
+    Write-Progress -Activity $activity
+    
+    # Define parameters for Get-ChildItem. See `Get-Help about_Splatting` for details.
+    $getChildItemsParams = @{
+        Path        = "$env:ProgramFiles\ArcGIS"
+        File        = $true
+        Recurse     = $true
+        Include     = "conda.*"
+        Depth       = 7
+        ErrorAction = "SilentlyContinue"
+    }
+    
+    foreach ($file in Get-ChildItem @getChildItemsParams) {
+        Remove-Variable getChildItemSearchPath
+        return $file
+    }
+    Write-Progress -Completed
+
+    # If the conda command still hasn't been found, throw an exception.
+    throw [FileNotFoundException]::new("Could not find a Conda executable.")
+}
+
+<#
+.SYNOPSIS
     Lists all of the conda environments   
 .DESCRIPTION
     Runs the `conda env list` command and parses the output into a hashtable.
@@ -98,7 +157,7 @@ function Get-CondaEnvironments {
             $path = [System.IO.DirectoryInfo]$match.Groups["path"].Value
             $isDefault = $match.Groups["default"].Success
 
-            $condaEnv = New-Object CondaEnvironment $name,$path,$isDefault
+            $condaEnv = New-Object CondaEnvironment $name, $path, $isDefault
             
 
             $output.Add($condaEnv)
