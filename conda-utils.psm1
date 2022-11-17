@@ -69,10 +69,12 @@ function Get-CondaCommand {
     }
 
     [DirectoryInfo[]]$possiblePaths = 
-      ("$env:ProgramFiles\ArcGIS\Pro\bin\Python\Scripts",
-    "$env:ProgramFiles\ArcGIS\Server\framework\runtime\ArcGIS\bin\Python\Scripts")
+        "$env:ProgramFiles\ArcGIS\Pro\bin\Python\Scripts",
+        "$env:ProgramFiles\ArcGIS\Server\framework\runtime\ArcGIS\bin\Python\Scripts"
 
-    # $getChildItemSearchPath = "$env:ProgramFiles\**\conda.*"
+    $possiblePaths = $possiblePaths | Where-Object Exists
+
+    $getChildItemSearchPath = $possiblePaths + "$env:ProgramFiles\ArcGIS" # "$env:ProgramFiles\**\conda.*"
     
 
     Write-Information "Could not find the ""Conda"" file in the directories specified in the PATH environment variable."
@@ -83,7 +85,7 @@ function Get-CondaCommand {
     
     # Define parameters for Get-ChildItem. See `Get-Help about_Splatting` for details.
     $getChildItemsParams = @{
-        Path        = "$env:ProgramFiles\ArcGIS"
+        Path        = $possiblePaths + "$env:ProgramFiles\ArcGIS"
         File        = $true
         Recurse     = $true
         Include     = "conda.*"
@@ -143,10 +145,18 @@ function Get-CondaEnvironments {
     ogr-test                 C:\Users\YourUserName\AppData\Local\ESRI\conda\envs\ogr-test
     #>
 
-    # This regex will match a line listing an environment.
+    <# 
+    This regex will match a line listing an environment.
+    
+    ## Groups
+
+    1. name - The name of the environment
+    2. default - If this group capture is successful, then this is the default environment
+    3. path - the path to the environment
+    #>
     $dataRe = [regex]"^(?<name>.+)\s{2,}(?<default>\*)?\s{2,}(?<path>.+)$";
     
-    # Create new outut hash table.
+    # Create new output list.
     $output = [List[CondaEnvironment]]::new()
 
     foreach ($line in $condaEnvList) {
